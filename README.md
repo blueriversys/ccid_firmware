@@ -2,7 +2,7 @@
 
 This is a CCID firmware for the ATMEL AT91SAM7S256 chip.
 <br>
-Once installed on the dongle (we call it card), the host OS will identify it as a smartcard reader with a card permantly inserted in it.
+Once installed on the dongle (we call it card), the host OS will identify it as a smartcard reader with a card permanently inserted in it.
 
 ## How to build
 You'll need:
@@ -18,10 +18,13 @@ It requires a client software for Windows, whose link will be provided shortly h
 
 ## Screenshots
 <p align="center">
-  <img align="center" src="https://github.com/blueriversys/ccid_firmware/blob/master/pics/smartcard_dongle.jpg">
+  <img align="center" src="https://github.com/blueriversys/ccid_firmware/blob/master/pics/smartcard_dongle.jpg" width="380" height="400">
   <br>
   Fig 1: This usb device becomes the combo smartcard reader + smartcard.
 </p>
+
+<br>
+<br>
   
 <p align="center">
   <img align="center" src="https://github.com/blueriversys/ccid_firmware/blob/master/pics/Win7DeviceManager.png">
