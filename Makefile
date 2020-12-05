@@ -22,7 +22,7 @@ FORMAT = binary
 
 # Target file name (without extension).
 TARGET = main
-TARGET_NAME = gnuk-smartcard
+TARGET_NAME = usb_ccid_smartcard
 
 # define the source folders
 ASM_SRC_FOLDER = src/asm
