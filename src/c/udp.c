@@ -1,5 +1,4 @@
 /**
- * USB support for leJOS.
  *
  * We use a mixture of interrupt driven and directly driven I/O. Interrupts
  * are used for handling the configuration/enumeration phases, which allows
@@ -11,10 +10,6 @@
  * set of functions in the firmware with as much as possible being done in
  * Java. In the case of USB, there are strict timing requirements so we
  * perform all of the configuration and enumeration here.
- *
- * The leJOS implementation uses the standard Lego identifiers (and so can
- * be used from the PC side applications that work with the standard Lego
- * firmware).
  *
  * This implementation handles the initial sequence of requests/responses to place
  * the firmware in a state of being recognized as a CCID device.
@@ -71,9 +66,9 @@
 #define USB_WRITEABLE   0x100000
 #define USB_READABLE    0x200000
 
-//#define LED1			(1<<18)						// PA18 green LED on Olimex regular board
-//#define LED1			(1<<8)						// PA8 green LED on Olimex header board
-#define LED1			(1<<0)						// DS1 green LED on Atmel board
+//#define LED1          (1<<18)                     // PA18 green LED on Olimex regular board
+//#define LED1          (1<<8)                      // PA8 green LED on Olimex header board
+#define LED1            (1<<0)                      // DS1 green LED on Atmel board
 
 
 static U8 currentConfig;
@@ -86,11 +81,11 @@ static U32 outCnt;
 static U8 delayedEnable = 0;
 
 #if REMOTE_CONSOLE
-	static U8 rConsole = 0;
+    static U8 rConsole = 0;
 #endif
 
 /*
-	Card control variables
+    Card control variables
 */
 unsigned int clock_frequency[] = {4000, 4800, 6000, 8000};
 unsigned int data_rate[] = {10752, 12903, 21505, 25806, 43010, 86021, 129032, 172053, 215053, 344086};
@@ -99,14 +94,14 @@ unsigned char return_data[DATA_SIZE];
 
 // Device descriptor
 static const U8 dd[] = {
-  0x12,	// size of this descriptor
-  0x01,	// type of descriptor (DEVICE)
-  0x00,	// USB version
-  0x02,	// USB version
-  0x00,	// class
-  0x00,	// subclass
-  0x00,	// protocol
-  0x08,	// control endpoint data size
+  0x12, // size of this descriptor
+  0x01, // type of descriptor (DEVICE)
+  0x00, // USB version
+  0x02, // USB version
+  0x00, // class
+  0x00, // subclass
+  0x00, // protocol
+  0x08, // control endpoint data size
   0xEB, // VENDOORID byte 1
   0x03, // VENDOORID byte 2
   0x34, // PRODUCTID byte 1
@@ -114,83 +109,83 @@ static const U8 dd[] = {
   0x00, // RELEASE byte 1
   0x00, // RELEASE byte 2
   0x02, // Index of manufacturer description
-  0x03,	// Index of product description
+  0x03, // Index of product description
   0x01, // Index of serial number description
-  0x01	// One possible configuration
+  0x01  // One possible configuration
 };
 
 // Configuration descriptor
 static const U8 cfd[] =
 {
-  0x09,	// size
-  0x02,	// configuration type
+  0x09, // size
+  0x02, // configuration type
   0x5D, // size byte 1
-  0x00,	// size byte 2
+  0x00, // size byte 2
   0x01, // There is one interface in this configuration
-  0x01,	// This is configuration #1
+  0x01, // This is configuration #1
   0x00, // No string descriptor for this configuration
   BUSPOWERED_NOREMOTEWAKEUP, // bmAttributes
   50, // power (50 means 100mA)
 
 // Interface descriptor
-  0x09,	// size
-  0x04,	// type of descriptor (INTERFACE)
-  0x00,	// This is interface #0
+  0x09, // size
+  0x04, // type of descriptor (INTERFACE)
+  0x00, // This is interface #0
   0x00, // This is alternate setting #0
-  0x03,	// number of endpoints used (1 out, 1 in, 1 interrupt)
+  0x03, // number of endpoints used (1 out, 1 in, 1 interrupt)
   0x0B, // CLASS
   0x00, // SUBCLASS
   0x00, // PROTOCOL
   0x00, // associated string descriptor
 
 // CCID class specific descriptor
-  0x36,					// (bLength*) Size of this description
-  0x21,					// (bDescriptorType*) Description type
-  0x00, 0x01,			// (bcdCCID*) version 1.00
-  0x00, 				// (bMaxSlotIndex*)
-  0x01,					// (bVoltageSupport) 01h indicates 5.0 volts
-  0x01,0x00,0x00,0x00,	// (dwProtocols*) upper word (PPPP) must be 0. Lower word indicates support for T0 and T1 (bit 1 and 2)
-  0x00,0x48,0x00,0x00, 	// dwDefaultClock (18.432Mhz given in Khz), not used in v1.00, fixed for legacy reasons
-  0x00,0x48,0x00,0x00, 	// dwMaximumClock (18.432Mhz given in Khz), not used in v1.00, fixed for legacy reasons
-  0x04, 				// bNumClockSupported => no manual setting
-  0x00,0x2A,0x00,0x00,	// (10752) dwDataRate
-  0xE7,0x4C,0x06,0x00, 	// (412903) dwMaxDataRate
-  0x0A, 				// bNumDataRatesSupported
-  0xFE,0x00,0x00,0x00, 	// dwMaxIFSD
-  0x07,0x00,0x00,0x00, 	// dwSynchProtocols
-  0x00,0x00,0x00,0x00, 	// dwMechanical
-  0xB2,0x07,0x02,0x00, 	// dwFeatures
+  0x36,                 // (bLength*) Size of this description
+  0x21,                 // (bDescriptorType*) Description type
+  0x00, 0x01,           // (bcdCCID*) version 1.00
+  0x00,                 // (bMaxSlotIndex*)
+  0x01,                 // (bVoltageSupport) 01h indicates 5.0 volts
+  0x01,0x00,0x00,0x00,  // (dwProtocols*) upper word (PPPP) must be 0. Lower word indicates support for T0 and T1 (bit 1 and 2)
+  0x00,0x48,0x00,0x00,  // dwDefaultClock (18.432Mhz given in Khz), not used in v1.00, fixed for legacy reasons
+  0x00,0x48,0x00,0x00,  // dwMaximumClock (18.432Mhz given in Khz), not used in v1.00, fixed for legacy reasons
+  0x04,                 // bNumClockSupported => no manual setting
+  0x00,0x2A,0x00,0x00,  // (10752) dwDataRate
+  0xE7,0x4C,0x06,0x00,  // (412903) dwMaxDataRate
+  0x0A,                 // bNumDataRatesSupported
+  0xFE,0x00,0x00,0x00,  // dwMaxIFSD
+  0x07,0x00,0x00,0x00,  // dwSynchProtocols
+  0x00,0x00,0x00,0x00,  // dwMechanical
+  0xB2,0x07,0x02,0x00,  // dwFeatures
   0x0F,0x01,0x00,0x00,  // dwMaxCCIDMessageLength (271)
-  0xFF, 				// bClassGetResponse
-  0xFF, 				// bClassEnvelope
-  0x00,0x00,			// wLcdLayout
-  0x00,					// bPINSupport
-  0x01,					// bMaxCCIDBusySlots
+  0xFF,                 // bClassGetResponse
+  0xFF,                 // bClassEnvelope
+  0x00,0x00,            // wLcdLayout
+  0x00,                 // bPINSupport
+  0x01,                 // bMaxCCIDBusySlots
 
 // Endpoint descriptors
-  0x07,	// size
-  0x05,	// type of configuration (ENDPOINT)
-  0x01,	// endpoint number and direction (OUT)
-  0x02,	// type of endpoint (BULK)
-  64,	// endpoint data size byte 1
+  0x07, // size
+  0x05, // type of configuration (ENDPOINT)
+  0x01, // endpoint number and direction (OUT)
+  0x02, // type of endpoint (BULK)
+  64,   // endpoint data size byte 1
   0x00, // endpoint data size byte 2
   0x00, // interval
 
-  0x07,	// size
-  0x05,	// type of configuration (ENDPOINT)
-  0x82,	// endpoint number and direction (IN)
-  0x02,	// type of endpoint (BULK)
-  64,	// endpoint data size byte 1
-  0x00,	// endpoint data size byte 2
+  0x07, // size
+  0x05, // type of configuration (ENDPOINT)
+  0x82, // endpoint number and direction (IN)
+  0x02, // type of endpoint (BULK)
+  64,   // endpoint data size byte 1
+  0x00, // endpoint data size byte 2
   0x00, // interval
 
-  0x07,	// size
-  0x05,	// type of configuration (ENDPOINT)
-  0x83,	// endpoint number and direction (IN)
-  0x03,	// type of endpoint (INTERRUPT)
-  8,	// endpoint data size byte 1
-  0x00,	// endpoint data size byte 2
-  0x18	// interval
+  0x07, // size
+  0x05, // type of configuration (ENDPOINT)
+  0x83, // endpoint number and direction (IN)
+  0x03, // type of endpoint (INTERRUPT)
+  8,    // endpoint data size byte 1
+  0x00, // endpoint data size byte 2
+  0x18  // interval
 };
 
 
@@ -274,42 +269,40 @@ extern void udp_isr_entry(void);
 
 void led_configure()
 {
-	volatile AT91PS_PIO	pPIO = AT91C_BASE_PIOA;			// pointer to PIO data structure
-	pPIO->PIO_PER = LED1;				// PIO Enable Register - allow PIO to control pins P0 - P3 and pin 19
-	pPIO->PIO_OER = LED1;							// PIO Output Enable Register - sets pins P0 - P3 to outputs
-	pPIO->PIO_SODR = LED1;							// PIO Set Output Data Register - turns off the four LEDs
+    volatile AT91PS_PIO pPIO = AT91C_BASE_PIOA;         // pointer to PIO data structure
+    pPIO->PIO_PER = LED1;               // PIO Enable Register - allow PIO to control pins P0 - P3 and pin 19
+    pPIO->PIO_OER = LED1;                           // PIO Output Enable Register - sets pins P0 - P3 to outputs
+    pPIO->PIO_SODR = LED1;                          // PIO Set Output Data Register - turns off the four LEDs
 }
 
 void led_turnoff()
 {
-	volatile AT91PS_PIO	pPIO = AT91C_BASE_PIOA;			// pointer to PIO data structure
-	pPIO->PIO_SODR = LED1;							// PIO Set Output Data Register - turns off LED
+    volatile AT91PS_PIO pPIO = AT91C_BASE_PIOA;         // pointer to PIO data structure
+    pPIO->PIO_SODR = LED1;                          // PIO Set Output Data Register - turns off LED
 }
 
 void led_turnon()
 {
-	volatile AT91PS_PIO	pPIO = AT91C_BASE_PIOA;			// pointer to PIO data structure
-	pPIO->PIO_CODR = LED1;							// PIO Set Output Data Register - turns on LED
+    volatile AT91PS_PIO pPIO = AT91C_BASE_PIOA;         // pointer to PIO data structure
+    pPIO->PIO_CODR = LED1;                          // PIO Set Output Data Register - turns on LED
 }
 
 // turns the USB activity ON
 void usb_activity_on()
 {
-	led_turnon();
-	systick_wait_ms(20);
+    led_turnon();
+    systick_wait_ms(20);
 }
 
 // turns the USB activity OFF
 void usb_activity_off()
 {
-	led_turnoff();
-	systick_wait_ms(20);
+    led_turnoff();
+    systick_wait_ms(20);
 }
 
 
-static
-void
-reset()
+static void reset()
 {
   // setup config state.
   currentConfig = 0;
@@ -322,8 +315,7 @@ reset()
 }
 
 
-int
-udp_init(void)
+int udp_init(void)
 {
   udp_disable();
   configured = (USB_DISABLED|USB_NEEDRESET);
@@ -332,8 +324,7 @@ udp_init(void)
   return 1;
 }
 
-void
-udp_reset()
+void udp_reset()
 {
   int i_state;
 
@@ -374,8 +365,7 @@ udp_reset()
     interrupts_enable();
 }
 
-int
-udp_read(U8* buf, int off, int len)
+int udp_read(U8* buf, int off, int len)
 {
   // Perform a non-blocking read operation. We use double buffering (ping-pong)
   // operation to provide better throughput.
@@ -397,22 +387,22 @@ udp_read(U8* buf, int off, int len)
     packetSize = ((*AT91C_UDP_CSR1) & AT91C_UDP_RXBYTECNT) >> 16;
 
     if (packetSize + blockSize > len) {
-		packetSize = len - blockSize;
-	}
+        packetSize = len - blockSize;
+    }
     else
     if (packetSize > len)
        packetSize = len;
 
-	// turns the USB activity ON
-	led_turnon();
-	systick_wait_ms(20);
+    // turns the USB activity ON
+    led_turnon();
+    systick_wait_ms(20);
 
     for (i=0;i<packetSize;i++) {
        buf[off+a++] = *AT91C_UDP_FDR1;
     }
 
-	// Clear transmission flag and wait for the synchronization
-	while (*AT91C_UDP_CSR1 & currentRxBank)
+    // Clear transmission flag and wait for the synchronization
+    while (*AT91C_UDP_CSR1 & currentRxBank)
        *AT91C_UDP_CSR1 &= ~(currentRxBank);
 
     // Flip bank
@@ -421,9 +411,9 @@ udp_read(U8* buf, int off, int len)
     blockSize += packetSize;
 
 
-	// turns the USB activity OFF
-	led_turnoff();
-	systick_wait_ms(20);
+    // turns the USB activity OFF
+    led_turnoff();
+    systick_wait_ms(20);
 
     if (blockSize == len || packetSize < 64)
        break;
@@ -436,8 +426,7 @@ udp_read(U8* buf, int off, int len)
 }
 
 
-int
-udp_write(U8* buf, int off, int len)
+int udp_write(U8* buf, int off, int len)
 {
   /* Perform a non-blocking write. Return the number of bytes actually
    * written.
@@ -491,9 +480,7 @@ int udp_write_interrupt_in(U8* buf, int len)
 }
 
 
-static
-void
-udp_send_null()
+static void udp_send_null()
 {
   UDP_SETEPFLAGS(*AT91C_UDP_CSR0, AT91C_UDP_TXPKTRDY);
 }
@@ -521,10 +508,6 @@ static void udp_enumerate()
   U8 bt, br;
   int req, len, ind, val;
   short status;
-    //display_goto_xy(8,3);
-    //display_string(hex4(*AT91C_UDP_CSR0));
-    //display_goto_xy(12,3);
-    //display_string("    ");
 
   // First we deal with any completion states.
   if ((*AT91C_UDP_CSR0) & AT91C_UDP_TXCOMP)
@@ -592,25 +575,25 @@ static void udp_enumerate()
 
   switch(req)
   {
-	// Here we treat the class specific requests first.
-	// Begin of class specific requests
-	case ABORT_COMMAND:
-		break;
+    // Here we treat the class specific requests first.
+    // Begin of class specific requests
+    case ABORT_COMMAND:
+        break;
 
-	case GET_CLOCK_FREQUENCIES_COMMAND:
-		// this will send data through the Control endpoint
-		udp_send_control((U8*)clock_frequency, 16);
-		break;
+    case GET_CLOCK_FREQUENCIES_COMMAND:
+        // this will send data through the Control endpoint
+        udp_send_control((U8*)clock_frequency, 16);
+        break;
 
-	case GET_DATA_RATES_COMMAND:
-		// this will send data through the Control Endpoint
-		udp_send_control((U8*)data_rate, 40);
+    case GET_DATA_RATES_COMMAND:
+        // this will send data through the Control Endpoint
+        udp_send_control((U8*)data_rate, 40);
 
-		// Now inform the host driver, through the interrupt endpoint,
-		// that a card has been inserted
-		udp_write_interrupt_in((U8*)cardInserted, 2);
-		break;
-	// End of class specific requests
+        // Now inform the host driver, through the interrupt endpoint,
+        // that a card has been inserted
+        udp_write_interrupt_in((U8*)cardInserted, 2);
+        break;
+    // End of class specific requests
 
     case STD_GET_DESCRIPTOR:
       if (val == 0x100) // Get device descriptor
@@ -631,13 +614,13 @@ static void udp_enumerate()
           case 0x00:
             udp_send_control((U8 *)ld, MIN(sizeof(ld), len));
             break;
-          case 0x01:		// serial number string descriptor
+          case 0x01:        // serial number string descriptor
             udp_send_control(snd, MIN(sizeof(snd), len));
             break;
-          case 0x02:		// manufacturer string descriptor
+          case 0x02:        // manufacturer string descriptor
             udp_send_control(manufacturer, MIN(sizeof(manufacturer), len));
             break;
-          case 0x03:		// product string descriptor
+          case 0x03:        // product string descriptor
             udp_send_control(product, MIN(sizeof(product), len));
             break;
           default:
@@ -663,7 +646,6 @@ static void udp_enumerate()
       delayedEnable = 0;
       *AT91C_UDP_CSR1 = (val) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
       *AT91C_UDP_CSR2 = (val) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
-//      *AT91C_UDP_CSR3 = (val) ? (AT91C_UDP_EPTYPE_INT_IN)   : 0;
       *AT91C_UDP_CSR3 = (val) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0;
 
       break;
@@ -811,22 +793,13 @@ static void udp_enumerate()
     default:
       udp_send_stall();
   }
-    //display_goto_xy(14,3);
-    //display_string("E2");
+  
 }
 
-void
-udp_isr_C(void)
+void udp_isr_C(void)
 {
   /* Process interrupts. We mainly use these during the configuration and
    * enumeration stages.
-   */
-
-  /*
-   display_goto_xy(0,3);
-   display_string(hex4(*AT91C_UDP_ISR));
-   display_goto_xy(4,3);
-   display_string(hex4(intCnt++));
    */
 
   // Should never get here if disabled, but just in case!
@@ -835,9 +808,6 @@ udp_isr_C(void)
 
   if (*AT91C_UDP_ISR & END_OF_BUS_RESET)
   {
-    //display_goto_xy(0,2);
-    //display_string("Bus Reset     ");
-    //display_update();
     *AT91C_UDP_ICR = END_OF_BUS_RESET;
     *AT91C_UDP_ICR = SUSPEND_RESUME;
     *AT91C_UDP_ICR = WAKEUP;
@@ -847,16 +817,11 @@ udp_isr_C(void)
     reset();
     UDP_SETEPFLAGS(*AT91C_UDP_CSR0,(AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_CTRL));
     *AT91C_UDP_IER = (AT91C_UDP_EPINT0 | AT91C_UDP_RXSUSP | AT91C_UDP_RXRSM);
-    //display_goto_xy(12,2);
-    //display_string("IE1");
     return;
   }
 
   if (*AT91C_UDP_ISR & SUSPEND_INT)
   {
-    //display_goto_xy(0,2);
-    //display_string("Suspend      ");
-    //display_update();
     if (configured == USB_CONFIGURED)
        configured = USB_SUSPENDED;
     else
@@ -867,9 +832,6 @@ udp_isr_C(void)
 
   if (*AT91C_UDP_ISR & SUSPEND_RESUME)
   {
-    //display_goto_xy(0,2);
-    //display_string("Resume     ");
-    //display_update();
     if (configured == USB_SUSPENDED)
        configured = USB_CONFIGURED;
     else
@@ -880,19 +842,13 @@ udp_isr_C(void)
 
   if (*AT91C_UDP_ISR & AT91C_UDP_EPINT0)
   {
-    //display_goto_xy(0,2);
-    //display_string("Data       ");
-    //display_update();
     *AT91C_UDP_ICR = AT91C_UDP_EPINT0;
     udp_enumerate();
   }
 
-  //display_goto_xy(12,2);
-  //display_string("IE2");
 }
 
-int
-udp_status()
+int udp_status()
 {
   /* Return the current status of the USB connection. This information
    * can be used to determine if the connection can be used. We return
@@ -914,8 +870,7 @@ udp_status()
   return ret;
 }
 
-void
-udp_enable(int reset)
+void udp_enable(int reset)
 {
   /* Enable the processing of USB requests. */
   /* Initialise the interrupt handler. We use a very low priority because
@@ -923,10 +878,10 @@ udp_enable(int reset)
    */
   if (reset & 0x2)
   {
-	#if REMOTE_CONSOLE
-    	rConsole = 1;
-    	printf("Firmware output enabled\n");
-	#endif
+    #if REMOTE_CONSOLE
+        rConsole = 1;
+        printf("Firmware output enabled\n");
+    #endif
     return;
   }
 
@@ -945,8 +900,7 @@ udp_enable(int reset)
      udp_reset();
 }
 
-void
-udp_disable()
+void udp_disable()
 {
   /* Disable processing of USB requests */
   int i_state = interrupts_get_and_disable();
@@ -958,13 +912,12 @@ udp_disable()
   if (i_state)
     interrupts_enable();
 
-	#if REMOTE_CONSOLE
-  		rConsole = 0;
-	#endif
+    #if REMOTE_CONSOLE
+        rConsole = 0;
+    #endif
 }
 
-void
-udp_set_serialno(U8 *serNo, int len)
+void udp_set_serialno(U8 *serNo, int len)
 {
   /* Set the USB serial number. serNo should point to a 12 character
    * Unicode string, containing the USB serial number.
@@ -973,8 +926,7 @@ udp_set_serialno(U8 *serNo, int len)
     memcpy(snd+2, serNo, len*2);
 }
 
-void
-udp_set_name(U8 *name, int len)
+void udp_set_name(U8 *name, int len)
 {
   if (len <= (sizeof(named)-2)/2)
   {
@@ -985,8 +937,7 @@ udp_set_name(U8 *name, int len)
 
 
 #if REMOTE_CONSOLE
-void
-udp_rconsole(U8 *buf, int cnt)
+void udp_rconsole(U8 *buf, int cnt)
 {
   if (!rConsole)
      return;
